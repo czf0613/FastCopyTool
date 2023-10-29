@@ -16,12 +16,25 @@
       "shell": {
         "all": false,
         "open": true
+      },
+      "dialog": {
+        "all": false,
+        "save": true,
+        "open": true,
+        "message": true
+      },
+      "path": {
+        "all": true
       }
     },
     "bundle": {
       "active": true,
-      "targets": "all",
-      "identifier": "ltd.kevinc.fast_copy",
+      "targets": [
+        "msi",
+        "app",
+        "deb"
+      ],
+      "identifier": "com.pkk.fastcopy",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -36,10 +49,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "resizable": true,
+        "resizable": false,
         "title": "FastCopyTool",
         "width": 800,
-        "height": 600
+        "height": 640
       }
     ]
   }
