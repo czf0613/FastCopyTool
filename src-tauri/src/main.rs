@@ -11,6 +11,8 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             sys_utils::get_sys_info,
+            sys_utils::get_4k_write_speed,
+            sys_utils::get_4k_read_speed,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
