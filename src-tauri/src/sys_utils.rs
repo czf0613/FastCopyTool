@@ -22,6 +22,8 @@ lazy_static! {
     };
 }
 
+const FILE_TEST_BATCH: i32 = 200;
+
 #[tauri::command]
 pub async fn get_sys_info() -> SystemInfo {
     let mut sys = System::new_all();
@@ -47,7 +49,7 @@ pub async fn get_4k_write_speed(path: String) -> u64 {
     let mut total_size = 0u64;
     let mut total_time_micro = 0u64;
 
-    for i in 0..1000 {
+    for i in 0..FILE_TEST_BATCH {
         let (size, time) = random_write_file_at_path(test_path.join(format!("{}.bin", i)));
         total_size += size;
         total_time_micro += time;
@@ -69,7 +71,7 @@ pub async fn get_4k_read_speed(path: String) -> u64 {
     std::fs::create_dir_all(test_path.clone()).unwrap();
 
     // 随便乱生成一些文件，然后读取它们
-    for i in 0..1000 {
+    for i in 0..FILE_TEST_BATCH {
         let (_, _) = random_write_file_at_path(test_path.join(format!("{}.bin", i)));
     }
 
@@ -77,8 +79,8 @@ pub async fn get_4k_read_speed(path: String) -> u64 {
     let mut total_size = 0u64;
     let mut total_time_micro = 0u64;
 
-    for _ in 0..1000 {
-        let file_index = rng.next_u64() % 1000;
+    for _ in 0..FILE_TEST_BATCH {
+        let file_index = rng.next_u64() % FILE_TEST_BATCH as u64;
         let start_time = Instant::now();
 
         if let Ok(buffer) = std::fs::read(test_path.join(format!("{}.bin", file_index))) {
@@ -111,11 +113,13 @@ fn random_write_file_at_path(path: PathBuf) -> (u64, u64) {
 
 fn recursive_delete(path: PathBuf) {
     if path.is_dir() {
-        for entry in std::fs::read_dir(path).unwrap() {
+        for entry in std::fs::read_dir(path.clone()).unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();
             recursive_delete(path);
         }
+
+        std::fs::remove_dir(path).unwrap();
     } else {
         std::fs::remove_file(path).unwrap();
     }

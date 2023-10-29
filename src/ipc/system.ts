@@ -11,3 +11,15 @@ export interface SystemInfo {
 export async function getSystemInfo(): Promise<SystemInfo> {
     return await invoke<SystemInfo>('get_sys_info')
 }
+
+export async function getReadSpeed(path: string): Promise<number> {
+    return await invoke<number>('get_4k_read_speed', {
+        path
+    })
+}
+
+export async function getWriteSpeed(path: string): Promise<number> {
+    return await invoke<number>('get_4k_write_speed', {
+        path
+    })
+}

@@ -184,7 +184,7 @@
 </template>
 
 <script lang="ts">
-import { getSystemInfo } from "../ipc/system";
+import { getSystemInfo, getReadSpeed, getWriteSpeed } from "../ipc/system";
 import { open, message } from "@tauri-apps/api/dialog";
 import { resolve, join, basename } from "@tauri-apps/api/path";
 
@@ -343,9 +343,34 @@ export default {
     },
     async startTask() {
       this.taskStatus.isRunning = true;
-      this.taskStatus.progress = 1;
       this.taskStatus.messages = [];
-      this.taskStatus.messagesDisplay = "1\n2\n3\n";
+
+      this.taskStatus.progress = 1;
+      this.taskStatus.messages.push("Enumerating files ...");
+      this.buildLogDisplay();
+
+      this.taskStatus.progress = 2;
+      this.taskStatus.messages.push("Preparing sources ...");
+      this.buildLogDisplay();
+
+      const readBytesPerSecond = await getReadSpeed(this.taskConfig.inputFiles[0]);
+      this.taskStatus.messages.push(
+        `Read speed: ${(readBytesPerSecond / 1048576).toFixed(3)} MB/s.`
+      );
+      this.buildLogDisplay();
+
+      const writeBytesPerSecond = await getWriteSpeed(this.taskConfig.outputFolder);
+      this.taskStatus.messages.push(
+        `Write speed: ${(writeBytesPerSecond / 1048576).toFixed(3)} MB/s.`
+      );
+      this.buildLogDisplay();
+
+      this.taskStatus.progress = 3;
+      this.taskStatus.messages.push("Processing ...");
+      this.buildLogDisplay();
+    },
+    buildLogDisplay() {
+      this.taskStatus.messagesDisplay = this.taskStatus.messages.join("\n");
     },
   },
   async mounted() {
