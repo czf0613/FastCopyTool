@@ -73,6 +73,13 @@
             :disabled="taskStatus.isRunning"
           />
 
+          <el-switch
+            v-model="taskConfig.isSameDriver"
+            active-text="Same Driver"
+            inactive-text="Different Driver"
+            :disabled="taskStatus.isRunning"
+          />
+
           <el-checkbox
             v-model="taskConfig.ignoreHiddenFiles"
             :disabled="taskStatus.isRunning"
@@ -89,7 +96,7 @@
     </el-col>
 
     <el-col :span="11" :offset="2">
-      <el-card class="bi-col-bi-col-box-card">
+      <el-card class="bi-col-box-card">
         <template #header>
           <div class="card-header">
             <span>Target</span>
@@ -204,6 +211,7 @@ export default {
         isCopyMode: true,
         ignoreHiddenFiles: false,
         ignoreEmptyFolders: true,
+        isSameDriver: true,
         inputFiles: [],
         outputFolder: "",
         actionsPreview: [],
@@ -347,21 +355,41 @@ export default {
 
       this.taskStatus.progress = 1;
       this.taskStatus.messages.push("Enumerating files ...");
+      this.taskStatus.messages.push(
+        `Selected ${this.taskConfig.inputFiles.length} sources, expanding sub folders and files ...`
+      );
       this.buildLogDisplay();
 
       this.taskStatus.progress = 2;
       this.taskStatus.messages.push("Preparing sources ...");
-      this.buildLogDisplay();
-
-      const readBytesPerSecond = await getReadSpeed(this.taskConfig.inputFiles[0]);
       this.taskStatus.messages.push(
-        `Read speed: ${(readBytesPerSecond / 1048576).toFixed(3)} MB/s.`
+        "Doing speed test and collecting information for algorithm ..."
       );
       this.buildLogDisplay();
 
-      const writeBytesPerSecond = await getWriteSpeed(this.taskConfig.outputFolder);
+      const readBytesPerSecond = await getReadSpeed(
+        this.taskConfig.inputFiles[0]
+      );
+      this.taskStatus.messages.push(
+        `Read speed: ${(readBytesPerSecond / 1048576).toFixed(3)} MB/s.`
+      );
+      this.taskStatus.messages.push(
+        `It seems that the source is a ${
+          readBytesPerSecond > 5242880 ? "SSD" : "HDD"
+        }`
+      );
+      this.buildLogDisplay();
+
+      const writeBytesPerSecond = await getWriteSpeed(
+        this.taskConfig.outputFolder
+      );
       this.taskStatus.messages.push(
         `Write speed: ${(writeBytesPerSecond / 1048576).toFixed(3)} MB/s.`
+      );
+      this.taskStatus.messages.push(
+        `It seems that the target is a ${
+          writeBytesPerSecond > 5242880 ? "SSD" : "HDD"
+        }`
       );
       this.buildLogDisplay();
 
@@ -393,7 +421,7 @@ export default {
 }
 
 .bi-col-box-card {
-  height: 200px;
+  height: 225px;
 }
 
 .box-card {

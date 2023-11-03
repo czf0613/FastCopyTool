@@ -1,6 +1,11 @@
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{io::Write, path::PathBuf, time::Instant};
+use std::{
+    io::Write,
+    path::PathBuf,
+    sync::atomic::{AtomicU64, Ordering},
+    time::Instant,
+};
 use sysinfo::{CpuExt, System, SystemExt};
 
 #[derive(Serialize, Deserialize)]
@@ -23,6 +28,8 @@ lazy_static! {
 }
 
 const FILE_TEST_BATCH: i32 = 200;
+pub static SYSTEM_READ_SPEED: AtomicU64 = AtomicU64::new(1);
+pub static SYSTEM_WRITE_SPEED: AtomicU64 = AtomicU64::new(1);
 
 #[tauri::command]
 pub async fn get_sys_info() -> SystemInfo {
@@ -55,13 +62,14 @@ pub async fn get_4k_write_speed(path: String) -> u64 {
         total_time_micro += time;
 
         // 此时故意去读取一下别的目录，让磁盘的磁头移开，以此来模拟极端的使用场景
-        let cache_dir = dirs::cache_dir().unwrap();
-        let _ = std::fs::read_dir(cache_dir);
+        let _ = std::fs::read(test_path.join("0.bin"));
     }
 
     recursive_delete(test_path);
+    let speed = total_size * 1000000 / total_time_micro;
+    SYSTEM_WRITE_SPEED.store(speed, Ordering::SeqCst);
 
-    return total_size * 1000000 / total_time_micro;
+    return speed;
 }
 
 #[tauri::command]
@@ -91,8 +99,10 @@ pub async fn get_4k_read_speed(path: String) -> u64 {
     }
 
     recursive_delete(test_path);
+    let speed = total_size * 1000000 / total_time_micro;
+    SYSTEM_READ_SPEED.store(speed, Ordering::SeqCst);
 
-    return total_size * 1000000 / total_time_micro;
+    return speed;
 }
 
 // 返回一个元组，第一项为写入的数据量，第二项为花费的时间（微秒），即可统计写入的速度
