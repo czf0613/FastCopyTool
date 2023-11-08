@@ -28,7 +28,7 @@ lazy_static! {
     };
 }
 
-const FILE_TEST_BATCH: i32 = 200;
+const FILE_TEST_BATCH: i32 = 30;
 pub static SYSTEM_READ_SPEED: AtomicU64 = AtomicU64::new(1);
 pub static SYSTEM_WRITE_SPEED: AtomicU64 = AtomicU64::new(1);
 pub static SYSTEM_READ_DELAY: AtomicU64 = AtomicU64::new(1);

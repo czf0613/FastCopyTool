@@ -377,10 +377,15 @@ export default {
         this.taskConfig.inputFiles[0]
       );
       this.taskStatus.messages.push(
-        `Read speed: ${(readBytesPerSecond / 1048576).toFixed(3)} MB/s.`
+        `Random read speed: ${(readBytesPerSecond / 1048576).toFixed(3)} MB/s.`
       );
+      this.buildLogDisplay();
+
+      const readDelay = await getReadDelay(this.taskConfig.inputFiles[0]);
+      this.taskStatus.messages.push(`Read delay: ${readDelay.toFixed(3)} ms.`);
+
       this.taskStatus.messages.push(
-        `It seems that the source is a ${
+        `It seems that the source is an ${
           readBytesPerSecond > 5242880 ? "SSD" : "HDD"
         }`
       );
@@ -390,22 +395,21 @@ export default {
         this.taskConfig.outputFolder
       );
       this.taskStatus.messages.push(
-        `Write speed: ${(writeBytesPerSecond / 1048576).toFixed(3)} MB/s.`
+        `Random write speed: ${(writeBytesPerSecond / 1048576).toFixed(
+          3
+        )} MB/s.`
       );
-      this.taskStatus.messages.push(
-        `It seems that the target is a ${
-          writeBytesPerSecond > 5242880 ? "SSD" : "HDD"
-        }`
-      );
-      this.buildLogDisplay();
-
-      const readDelay = await getReadDelay(this.taskConfig.inputFiles[0]);
-      this.taskStatus.messages.push(`Read delay: ${readDelay.toFixed(3)} ms.`);
       this.buildLogDisplay();
 
       const writeDelay = await getWriteDelay(this.taskConfig.outputFolder);
       this.taskStatus.messages.push(
         `Write delay: ${writeDelay.toFixed(3)} ms.`
+      );
+
+      this.taskStatus.messages.push(
+        `It seems that the target is an ${
+          writeBytesPerSecond > 5242880 ? "SSD" : "HDD"
+        }`
       );
       this.buildLogDisplay();
 
