@@ -1,7 +1,8 @@
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
-    io::Write,
+    fs::File,
+    io::{Read, Write},
     path::PathBuf,
     sync::atomic::{AtomicU64, Ordering},
     time::Instant,
@@ -30,6 +31,8 @@ lazy_static! {
 const FILE_TEST_BATCH: i32 = 200;
 pub static SYSTEM_READ_SPEED: AtomicU64 = AtomicU64::new(1);
 pub static SYSTEM_WRITE_SPEED: AtomicU64 = AtomicU64::new(1);
+pub static SYSTEM_READ_DELAY: AtomicU64 = AtomicU64::new(1);
+pub static SYSTEM_WRITE_DELAY: AtomicU64 = AtomicU64::new(1);
 
 #[tauri::command]
 pub async fn get_sys_info() -> SystemInfo {
@@ -133,4 +136,59 @@ fn recursive_delete(path: PathBuf) {
     } else {
         std::fs::remove_file(path).unwrap();
     }
+}
+
+#[tauri::command]
+pub async fn get_read_delay(path: String) -> f64 {
+    let read_path = PathBuf::from(path);
+    let time_micro = read_first_byte_time(&read_path);
+    SYSTEM_READ_DELAY.store(time_micro, Ordering::SeqCst);
+
+    return time_micro as f64 / 1000.0;
+}
+
+fn read_first_byte_time(path: &PathBuf) -> u64 {
+    if !path.is_dir() {
+        return timing_read_first_byte(path);
+    } else {
+        for entry in std::fs::read_dir(path.clone()).unwrap() {
+            let entry_path = entry.unwrap().path();
+
+            if !entry_path.is_dir() {
+                return timing_read_first_byte(&entry_path);
+            } else {
+                return read_first_byte_time(&entry_path);
+            }
+        }
+
+        return 1;
+    }
+}
+
+fn timing_read_first_byte(path: &PathBuf) -> u64 {
+    let mut buffer = [0u8; 1];
+
+    let start_time = Instant::now();
+    let mut file = File::open(path).unwrap();
+    let _ = file.read_exact(&mut buffer);
+
+    let end_time = start_time.elapsed().as_micros();
+    return end_time as u64;
+}
+
+#[tauri::command]
+pub async fn get_write_delay(path: String) -> f64 {
+    let write_path = PathBuf::from(path);
+    let test_path = write_path.join(".copy_test.bin");
+    let mut file = File::create(test_path.clone()).unwrap();
+    let buffer = [0u8; 1];
+
+    let start_time = Instant::now();
+    let _ = file.write(&buffer);
+    let end_time = start_time.elapsed().as_micros() as u64;
+
+    SYSTEM_WRITE_DELAY.store(end_time, Ordering::SeqCst);
+    let _ = std::fs::remove_file(test_path);
+
+    return end_time as f64 / 1000.0;
 }

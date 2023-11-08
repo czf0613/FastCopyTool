@@ -23,3 +23,15 @@ export async function getWriteSpeed(path: string): Promise<number> {
         path
     })
 }
+
+export async function getReadDelay(path: string): Promise<number> {
+    return await invoke<number>('get_read_delay', {
+        path
+    })
+}
+
+export async function getWriteDelay(path: string): Promise<number> {
+    return await invoke<number>('get_write_delay', {
+        path
+    })
+}

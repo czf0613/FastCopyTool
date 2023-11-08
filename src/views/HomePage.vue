@@ -191,7 +191,13 @@
 </template>
 
 <script lang="ts">
-import { getSystemInfo, getReadSpeed, getWriteSpeed } from "../ipc/system";
+import {
+  getSystemInfo,
+  getReadSpeed,
+  getWriteSpeed,
+  getReadDelay,
+  getWriteDelay,
+} from "../ipc/system";
 import { open, message } from "@tauri-apps/api/dialog";
 import { resolve, join, basename } from "@tauri-apps/api/path";
 
@@ -390,6 +396,16 @@ export default {
         `It seems that the target is a ${
           writeBytesPerSecond > 5242880 ? "SSD" : "HDD"
         }`
+      );
+      this.buildLogDisplay();
+
+      const readDelay = await getReadDelay(this.taskConfig.inputFiles[0]);
+      this.taskStatus.messages.push(`Read delay: ${readDelay.toFixed(3)} ms.`);
+      this.buildLogDisplay();
+
+      const writeDelay = await getWriteDelay(this.taskConfig.outputFolder);
+      this.taskStatus.messages.push(
+        `Write delay: ${writeDelay.toFixed(3)} ms.`
       );
       this.buildLogDisplay();
 

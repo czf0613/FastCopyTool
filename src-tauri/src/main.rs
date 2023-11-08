@@ -13,6 +13,8 @@ fn main() {
             sys_utils::get_sys_info,
             sys_utils::get_4k_write_speed,
             sys_utils::get_4k_read_speed,
+            sys_utils::get_read_delay,
+            sys_utils::get_write_delay,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
