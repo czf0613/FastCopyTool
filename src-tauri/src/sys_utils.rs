@@ -28,9 +28,11 @@ lazy_static! {
     };
 }
 
-const FILE_TEST_BATCH: i32 = 30;
+const FILE_TEST_BATCH: i32 = 20;
+// 单位是字节每秒
 pub static SYSTEM_READ_SPEED: AtomicU64 = AtomicU64::new(1);
 pub static SYSTEM_WRITE_SPEED: AtomicU64 = AtomicU64::new(1);
+// 单位是微秒
 pub static SYSTEM_READ_DELAY: AtomicU64 = AtomicU64::new(1);
 pub static SYSTEM_WRITE_DELAY: AtomicU64 = AtomicU64::new(1);
 
@@ -53,9 +55,9 @@ pub async fn get_sys_info() -> SystemInfo {
 pub async fn get_4k_write_speed(path: String) -> u64 {
     let path = PathBuf::from(path);
     let test_path = path.join(".copy_test");
-    std::fs::create_dir_all(test_path.clone()).unwrap();
+    let _ = tokio::fs::create_dir_all(test_path.clone()).await;
 
-    // 做一千次写入，然后来计算平均速度
+    // 做若干次写入，然后来计算平均速度
     let mut total_size = 0u64;
     let mut total_time_micro = 0u64;
 
@@ -65,10 +67,10 @@ pub async fn get_4k_write_speed(path: String) -> u64 {
         total_time_micro += time;
 
         // 此时故意去读取一下别的目录，让磁盘的磁头移开，以此来模拟极端的使用场景
-        let _ = std::fs::read(test_path.join("0.bin"));
+        let _ = tokio::fs::read(test_path.join("0.bin")).await;
     }
 
-    recursive_delete(test_path);
+    let _ = tokio::fs::remove_dir_all(test_path).await;
     let speed = total_size * 1000000 / total_time_micro;
     SYSTEM_WRITE_SPEED.store(speed, Ordering::SeqCst);
 
@@ -79,19 +81,19 @@ pub async fn get_4k_write_speed(path: String) -> u64 {
 pub async fn get_4k_read_speed(path: String) -> u64 {
     let path = PathBuf::from(path);
     let test_path = path.join(".copy_test");
-    std::fs::create_dir_all(test_path.clone()).unwrap();
+    let _ = tokio::fs::create_dir_all(test_path.clone()).await;
 
     // 随便乱生成一些文件，然后读取它们
     for i in 0..FILE_TEST_BATCH {
         let (_, _) = random_write_file_at_path(test_path.join(format!("{}.bin", i)));
     }
 
-    let mut rng = rand::thread_rng();
     let mut total_size = 0u64;
     let mut total_time_micro = 0u64;
 
     for _ in 0..FILE_TEST_BATCH {
-        let file_index = rng.next_u64() % FILE_TEST_BATCH as u64;
+        let mut rng = rand::thread_rng();
+        let file_index = rng.gen::<i32>() % FILE_TEST_BATCH;
         let start_time = Instant::now();
 
         if let Ok(buffer) = std::fs::read(test_path.join(format!("{}.bin", file_index))) {
@@ -101,7 +103,7 @@ pub async fn get_4k_read_speed(path: String) -> u64 {
         }
     }
 
-    recursive_delete(test_path);
+    let _ = tokio::fs::remove_dir_all(test_path).await;
     let speed = total_size * 1000000 / total_time_micro;
     SYSTEM_READ_SPEED.store(speed, Ordering::SeqCst);
 
@@ -111,9 +113,9 @@ pub async fn get_4k_read_speed(path: String) -> u64 {
 // 返回一个元组，第一项为写入的数据量，第二项为花费的时间（微秒），即可统计写入的速度
 fn random_write_file_at_path(path: PathBuf) -> (u64, u64) {
     let mut rng = rand::thread_rng();
-    let file_size = rng.next_u64() % 3072 + 1024;
+    let file_size = rng.gen::<usize>() % 3072 + 1024;
 
-    let mut buf = vec![0u8; file_size as usize];
+    let mut buf = vec![0u8; file_size];
     rng.fill_bytes(&mut buf);
 
     let start_time = Instant::now();
@@ -121,21 +123,7 @@ fn random_write_file_at_path(path: PathBuf) -> (u64, u64) {
     file.write_all(&buf).unwrap();
     let end_time = start_time.elapsed().as_micros();
 
-    return (file_size, end_time as u64);
-}
-
-fn recursive_delete(path: PathBuf) {
-    if path.is_dir() {
-        for entry in std::fs::read_dir(path.clone()).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            recursive_delete(path);
-        }
-
-        std::fs::remove_dir(path).unwrap();
-    } else {
-        std::fs::remove_file(path).unwrap();
-    }
+    return (file_size as u64, end_time as u64);
 }
 
 #[tauri::command]
@@ -188,7 +176,7 @@ pub async fn get_write_delay(path: String) -> f64 {
     let end_time = start_time.elapsed().as_micros() as u64;
 
     SYSTEM_WRITE_DELAY.store(end_time, Ordering::SeqCst);
-    let _ = std::fs::remove_file(test_path);
+    let _ = tokio::fs::remove_file(test_path).await;
 
     return end_time as f64 / 1000.0;
 }
