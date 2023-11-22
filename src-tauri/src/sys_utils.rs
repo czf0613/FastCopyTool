@@ -44,7 +44,7 @@ pub async fn get_sys_info() -> SystemInfo {
     return SystemInfo {
         os: OS_NAME.to_string(),
         cpu_cores: sys.cpus().len(),
-        cpu_usage: sys.cpus().iter().map(|cpu| cpu.cpu_usage()).sum(),
+        cpu_usage: sys.cpus().iter().map(|cpu| cpu.cpu_usage()).sum::<f32>() / sys.cpus().len() as f32,
         total_memory: sys.total_memory(),
         used_memory: sys.used_memory(),
     };
